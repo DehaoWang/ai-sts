@@ -1,18 +1,8 @@
-from entities import Entity
+from entities import Player
 from monsters import JawWorm, Cultist
 from deck import DeckManager
 from game import SpireClimb  # 引入我们刚刚抽离的调度器
-
-
-# ==========================================
-# 2. 玩家实体拓展
-# ==========================================
-class Player(Entity):
-    def __init__(self, name, hp, max_energy, pool):
-        super().__init__(name, hp)
-        self.max_energy = max_energy
-        self.energy = max_energy
-        self.pool = pool
+from relics import BurningBlood, Vajra
 
 
 # ==========================================
@@ -52,6 +42,8 @@ if __name__ == "__main__":
     # pool_id = 1
 
     chosen_player = Player(name="铁甲战士", hp=80, max_energy=3, pool="Ironclad")
+    chosen_player.gain_relic(BurningBlood())
+    chosen_player.gain_relic(Vajra())
     starter_deck_cards = ["打击"] * 5 + ["防御"] * 4 + ["痛击"]
     chosen_deck = DeckManager(starter_deck_cards)
 

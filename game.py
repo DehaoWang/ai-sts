@@ -32,10 +32,8 @@ class SpireClimb:
                     return
 
                 # todo 战斗胜利后奖励：恢复生命值、获得卡牌、获得遗物等
-                heal_amount = 6
-                self.player.hp = min(self.player.max_hp, self.player.hp + heal_amount)
                 print(
-                    f"\n🎉 战斗胜利！搜刮战利品：恢复 {heal_amount} 点生命值。(当前 HP: {self.player.hp}/{self.player.max_hp})")
+                    f"\n🎉 战斗胜利！搜刮战利品！当前 HP: {self.player.hp}/{self.player.max_hp}")
 
                 # 👇 触发战利品系统，传入当前楼层以计算升级掉落率
                 run_card_reward(self.player, self.deck, current_floor)
@@ -68,15 +66,23 @@ def run_combat(player, deck, engine, enemy, floor_num):
     player.powers.clear()
     player.clear_block()
 
+    # 👇 钩子 1：战斗开始阶段 (触发金刚杵、锚等)
+    player.trigger_relics("on_combat_start", engine, player, enemy)
+
+    # 因为遗物可能压入了开局动作（比如给力量），立刻结算一次队列
+    engine.action_queue.resolve_all(engine)
+
     turn_count = 1
-    # enemy.roll_intent()
-    # enemy.apply_powers(player)
 
     draw_num = 5  # 每回合抽牌数
 
     # --- 核心状态机循环 ---
     while player.hp > 0 and enemy.hp > 0:
         print(f"\n【第 {turn_count} 回合开始】")
+
+        # 👇 钩子 2：回合开始阶段 (可以在这里触发各类回合遗物)
+        player.trigger_relics("on_turn_start", engine, player)
+
         enemy.roll_intent()
         enemy.apply_powers(player)
 
@@ -153,6 +159,9 @@ def run_combat(player, deck, engine, enemy, floor_num):
             enemy.apply_powers(player)  # 实时更新敌人意图数值（如：被削弱后伤害降低）
 
         if enemy.hp <= 0:
+            # 👇 钩子 3：战斗结束阶段 (触发燃烧之血等)
+            player.trigger_relics("on_combat_end", player)
+
             break
 
         # 玩家回合结束结算

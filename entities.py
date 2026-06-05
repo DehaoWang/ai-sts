@@ -43,6 +43,35 @@ class Entity:
             print(f"  ✨ {self.name} 的 【{removed_name}】 状态已完全解除！")
 
 
+# ==========================================
+# 2. 玩家实体拓展
+# ==========================================
+class Player(Entity):
+    def __init__(self, name, hp, max_energy, pool):
+        super().__init__(name, hp)
+        self.max_energy = max_energy
+        self.energy = max_energy
+        self.pool = pool
+
+        # 🎒 新增遗物背包
+        self.relics = []
+
+    def gain_relic(self, relic):
+        """获得新遗物"""
+        self.relics.append(relic)
+        print(f"🌟 你获得了遗物：【{relic.name}】 - {relic.description}")
+
+    def trigger_relics(self, hook_name, *args, **kwargs):
+        """
+        核心广播器：遍历背包中所有遗物，如果有对应的钩子方法则执行
+        """
+        for relic in self.relics:
+            # 使用反射 (getattr) 动态获取遗物身上的方法
+            hook_method = getattr(relic, hook_name, None)
+            if hook_method:
+                hook_method(*args, **kwargs)
+
+
 # --- 3. 怪物基类 ---
 class Enemy(Entity):
     def __init__(self, name, hp):
@@ -86,9 +115,6 @@ class Enemy(Entity):
             self.intent_description = f"准备使用【{self.intent_name}】: {desc}"
         else:
             self.intent_description = f"准备使用【{self.intent_name}】: 未知行动"
-
-
-
 
         # """核心机制：重新计算并固化当前的真实意图数值 (等同于源码的 applyPowers)"""
         # if self.intent_base_damage > 0:
