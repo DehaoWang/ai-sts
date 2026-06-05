@@ -1,0 +1,23 @@
+{
+  "id": "strike",
+  "name": "打击",
+  "cost": 1,
+  "pool": "Silent",
+  "rarity": "Basic",
+  "effects": [
+    {
+      "action": "Damage",
+      "amount": 6,
+      "target": "enemy"
+    }
+  ],
+  "upgrade": {
+    "effects": [
+      {
+        "action": "Damage",
+        "amount": 9,
+        "target": "enemy"
+      }
+    ]
+  }
+}

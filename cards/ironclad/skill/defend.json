@@ -1,0 +1,23 @@
+{
+  "id": "defend",
+  "name": "防御",
+  "cost": 1,
+  "pool": "Ironclad",
+  "rarity": "Basic",
+  "effects": [
+    {
+      "action": "Block",
+      "amount": 5,
+      "target": "self"
+    }
+  ],
+  "upgrade": {
+    "effects": [
+      {
+        "action": "Block",
+        "amount": 8,
+        "target": "self"
+      }
+    ]
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "id": "neutralize",
+  "name": "中和",
+  "cost": 0,
+  "pool": "Silent",
+  "rarity": "Basic",
+  "effects": [
+    {
+      "action": "Damage",
+      "amount": 3,
+      "target": "enemy"
+    },
+    {
+      "action": "ApplyPower",
+      "power": "Weak",
+      "amount": 1,
+      "target": "enemy"
+    }
+  ],
+  "upgrade": {
+    "effects": [
+      {
+        "action": "Damage",
+        "amount": 4,
+        "target": "enemy"
+      },
+      {
+        "action": "ApplyPower",
+        "power": "Weak",
+        "amount": 2,
+        "target": "enemy"
+      }
+    ]
+  }
+}

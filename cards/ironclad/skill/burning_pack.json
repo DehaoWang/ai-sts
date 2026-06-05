@@ -1,0 +1,29 @@
+{
+  "id": "burning_pact",
+  "name": "燃烧契约",
+  "cost": 1,
+  "pool": "Ironclad",
+  "rarity": "Uncommon",
+  "effects": [
+    {
+      "action": "Exhaust",
+      "amount": 1
+    },
+    {
+      "action": "Draw",
+      "amount": 2
+    }
+  ],
+  "upgrade": {
+    "effects": [
+      {
+        "action": "Exhaust",
+        "amount": 1
+      },
+      {
+        "action": "Draw",
+        "amount": 3
+      }
+    ]
+  }
+}

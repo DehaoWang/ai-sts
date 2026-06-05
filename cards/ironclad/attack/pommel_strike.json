@@ -1,0 +1,17 @@
+{
+  "id": "pommel_strike",
+  "name": "剑柄打击",
+  "cost": 1,
+  "pool": "Ironclad",
+  "rarity": "Common",
+  "effects": [
+    {"action": "Damage", "amount": 9, "target": "enemy"},
+    {"action": "Draw", "amount": 1}
+  ],
+  "upgrade": {
+    "effects": [
+      {"action": "Damage", "amount": 10, "target": "enemy"},
+      {"action": "Draw", "amount": 2}
+    ]
+  }
+}
