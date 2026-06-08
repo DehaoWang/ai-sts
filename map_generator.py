@@ -9,14 +9,18 @@ from monsters import JawWorm, Cultist
 
 # 1. 普通怪物池 (包含单体和多体组合)
 NORMAL_ENCOUNTERS = [
+    # {
+    #     "name": "大颚虫",
+    #     "generator": lambda: [JawWorm("大颚虫", hp=40)]
+    # },
     {
-        "name": "大颚虫",
-        "generator": lambda: [JawWorm("大颚虫", hp=40)]
+        "name": "邪教徒",
+        "generator": lambda: [Cultist("邪教徒", hp=40)]
     },
-    {
-        "name": "邪教徒双人组",
-        "generator": lambda: [Cultist("邪教徒A", hp=45), Cultist("邪教徒B", hp=45)]
-    },
+    # {
+    #     "name": "邪教徒双人组",
+    #     "generator": lambda: [Cultist("邪教徒A", hp=45), Cultist("邪教徒B", hp=45)]
+    # },
 ]
 
 # 2. 关底 Boss 池

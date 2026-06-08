@@ -116,21 +116,6 @@ class Enemy(Entity):
         else:
             self.intent_description = f"准备使用【{self.intent_name}】: 未知行动"
 
-        # """核心机制：重新计算并固化当前的真实意图数值 (等同于源码的 applyPowers)"""
-        # if self.intent_base_damage > 0:
-        #
-        #     # 【核心】：结结实实地固化到属性上！
-        #     self.intent_damage = calculate_final_damage(self.intent_base_damage, self, target)
-        #
-        #
-        #     # 更新文本描述 (直接修改自身属性，不搞动态生成)
-        #     if self.intent_type == IntentType.ATTACK:
-        #         self.intent_description = f"准备使用【{self.intent_name}】: 造成 {self.intent_damage} 点伤害"
-        #     elif self.intent_type == IntentType.DEBUFF:
-        #         self.intent_description = f"准备使用【{self.intent_name}】: 造成 {self.intent_damage} 点伤害并给予易伤"
-        #     else:
-        #         self.intent_description = f"准备使用【{self.intent_name}】: 造成 {self.intent_damage} 点伤害并获得格挡"
-
         print(f"⚠️ 敌方当前意图: {self.intent_description}")
 
     def roll_intent(self):
