@@ -3,8 +3,8 @@ from entities import Enemy, IntentType
 
 
 class JawWorm(Enemy):
-    def __init__(self, hp=40):
-        super().__init__("大颚虫", hp)
+    def __init__(self, name="大颚冲", hp=40):
+        super().__init__(name=name, hp=hp)
         self.is_first_turn = True
 
     def roll_intent(self):

@@ -1,0 +1,33 @@
+{
+  "id": "breakthrough",
+  "name": "突破",
+  "cost": 1,
+  "pool": "Ironclad",
+  "rarity": "Common",
+  "effects": [
+    {
+      "action": "LoseHP",
+      "amount": 1,
+      "target": "self"
+    },
+    {
+      "action": "Damage",
+      "amount": 9,
+      "target": "all_enemies"
+    }
+  ],
+  "upgrade": {
+    "effects": [
+      {
+        "action": "LoseHP",
+        "amount": 1,
+        "target": "self"
+      },
+      {
+        "action": "Damage",
+        "amount": 13,
+        "target": "all_enemies"
+      }
+    ]
+  }
+}

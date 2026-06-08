@@ -3,8 +3,8 @@ from entities import Enemy, IntentType
 
 
 class Cultist(Enemy):
-    def __init__(self, hp=50):
-        super().__init__("邪教徒", hp)
+    def __init__(self, name="邪教徒", hp=50):
+        super().__init__(name=name, hp=hp)
         self.is_first_turn = True
 
     def roll_intent(self):

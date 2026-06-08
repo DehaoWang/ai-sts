@@ -2,27 +2,33 @@
 from engine import GameEngine
 from cards import CARD_DB, CARD_POOLS
 import random
+from map_generator import SpireMapGenerator
 
 
 # ==========================================
 # 1. 爬塔管理器 (Macro-Run)
 # ==========================================
 class SpireClimb:
-    def __init__(self, player, deck, floors):
+    def __init__(self, player, deck, total_floors):
         self.player = player
         self.deck = deck
         self.engine = GameEngine(deck_manager=self.deck)
-        self.floors = floors
+
+        generator = SpireMapGenerator(total_floors=total_floors)
+        self.floors = generator.generate_map()
 
     def start(self):
         print("\n" + "*" * 50)
-        print("🌋 欢迎来到杀戮尖塔！你的试炼即将开始...")
+        print(f"🌋 欢迎来到杀戮尖塔！本次试炼共 {len(self.floors)} 层，即将开始...")
         print("*" * 50)
 
         for current_floor, node in enumerate(self.floors, start=1):
             node_type = node.get("type")
             if node_type == "combat":
                 enemy = node["generator"]()
+                # self.engine.current_enemies = enemy  # 将敌人信息传递给战斗引擎
+                # print(enemy)
+
                 survived = run_combat(self.player, self.deck, self.engine, enemy, current_floor)
 
                 if not survived:
@@ -52,13 +58,14 @@ class SpireClimb:
 # ==========================================
 # 2. 单场战斗引擎 (Micro-Combat)
 # ==========================================
-def run_combat(player, deck, engine, enemy, floor_num):
+def run_combat(player, deck, engine, enemy_list, floor_num):
     """
     负责执行一场完整的战斗。
     返回 True 表示玩家胜利，False 表示玩家死亡。
     """
     print("\n" + "=" * 50)
-    print(f"🏰 【第 {floor_num} 层】 遭遇战开始！ 敌人: 【{enemy.name}】")
+    names = [enemy.name for enemy in enemy_list]
+    print(f"🏰 【第 {floor_num} 层】 遭遇战开始！ 敌人: 【{names}】")
     print("=" * 50)
 
     # 战前重置：洗牌、清空上一局的状态和格挡
@@ -66,8 +73,10 @@ def run_combat(player, deck, engine, enemy, floor_num):
     player.powers.clear()
     player.clear_block()
 
+    engine.current_enemies = enemy_list  # 将敌人信息传递给战斗引擎
+
     # 👇 钩子 1：战斗开始阶段 (触发金刚杵、锚等)
-    player.trigger_relics("on_combat_start", engine, player, enemy)
+    player.trigger_relics("on_combat_start", engine, player, enemy_list)
 
     # 因为遗物可能压入了开局动作（比如给力量），立刻结算一次队列
     engine.action_queue.resolve_all(engine)
@@ -77,14 +86,19 @@ def run_combat(player, deck, engine, enemy, floor_num):
     draw_num = 5  # 每回合抽牌数
 
     # --- 核心状态机循环 ---
-    while player.hp > 0 and enemy.hp > 0:
+    while player.hp > 0:
+        if not engine.current_enemies:
+            player.trigger_relics("on_combat_end", player)
+            return True  # 场上没怪了，直接凯旋！
+
         print(f"\n【第 {turn_count} 回合开始】")
 
         # 👇 钩子 2：回合开始阶段 (可以在这里触发各类回合遗物)
         player.trigger_relics("on_turn_start", engine, player)
 
-        enemy.roll_intent()
-        enemy.apply_powers(player)
+        for enemy in engine.current_enemies:
+            enemy.roll_intent()
+            enemy.apply_powers(player)
 
         # ==================================
         # 1. 玩家回合阶段
@@ -95,16 +109,19 @@ def run_combat(player, deck, engine, enemy, floor_num):
 
         # 玩家操作阶段
         while True:
-            status_str_player = ", ".join([str(p) for p in player.powers.values()]) if player.powers else "无"
-            status_str_enemy = ", ".join([str(p) for p in enemy.powers.values()]) if enemy.powers else "无"
+            if not engine.current_enemies:
+                break
 
-            print("-" * 40)
+            status_str_player = ", ".join([str(p) for p in player.powers.values()]) if player.powers else "无"
             print(
                 f"👤 {player.name} | HP: {player.hp}/{player.max_hp} | 格挡: {player.block} "
                 f"| 状态: [{status_str_player}] | 能量: {player.energy}/{player.max_energy}")
-            print(
-                f"👾 {enemy.name} | HP: {enemy.hp}/{enemy.max_hp} | 格挡: {enemy.block} "
-                f"| 状态: [{status_str_enemy}]")
+            print("-" * 40)
+            for i, e in enumerate(engine.current_enemies):
+                status_str_enemy = ", ".join([str(p) for p in e.powers.values()]) if e.powers else "无"
+                print(
+                    f"👾 {e.name} | HP: {e.hp}/{e.max_hp} | 格挡: {e.block} "
+                    f"| 状态: [{status_str_enemy}]")
             print("-" * 40)
 
             hand_options = [f"[{i + 1}] {name}({CARD_DB[name]['cost']}费)" for i, name in enumerate(deck.hand)]
@@ -136,6 +153,25 @@ def run_combat(player, deck, engine, enemy, floor_num):
                     card_data = CARD_DB[card_name]
 
                     if player.energy >= card_data['cost']:
+                        target_enemy = None  # 默认没有目标
+
+                        # 🌟 靶向判定与拦截机制
+                        needs_target = any(eff.get("target") == "enemy" for eff in card_data.get("effects", []))
+
+                        if needs_target:
+                            if len(engine.current_enemies) == 1:
+                                # 场上只有 1 个怪，自动锁定，无需玩家多敲一次键盘
+                                target_enemy = engine.current_enemies[0]
+                            else:
+                                # 场上多怪，挂起进程要求玩家选择
+                                target_choice = input(
+                                    f"  🎯 请选择【{card_name}】的目标 (1-{len(engine.current_enemies)}): ").strip()
+                                if target_choice.isdigit() and 1 <= int(target_choice) <= len(engine.current_enemies):
+                                    target_enemy = engine.current_enemies[int(target_choice) - 1]
+                                else:
+                                    print("  ❌ 目标选择无效，操作取消。")
+                                    continue  # 拦截本次出牌
+
                         player.energy -= card_data['cost']
                         deck.hand.pop(card_index)
 
@@ -146,9 +182,11 @@ def run_combat(player, deck, engine, enemy, floor_num):
                         else:
                             deck.discard_pile.append(card_name)
 
-                        engine.play_card(card_data, source=player, target=enemy)
-                        if enemy.hp <= 0:
-                            break
+                        engine.play_card(card_data, source=player, target=target_enemy)
+
+                        # 🌟 核心修复 1：玩家出牌后，必须立即强行清空结算动作队列，让伤害和死亡移除即时生效！
+                        engine.action_queue.resolve_all(engine)
+
                     else:
                         print("❌ 能量不足！")
                 else:
@@ -156,13 +194,13 @@ def run_combat(player, deck, engine, enemy, floor_num):
             except ValueError:
                 print("❌ 请输入数字！")
 
-            enemy.apply_powers(player)  # 实时更新敌人意图数值（如：被削弱后伤害降低）
+            for e in engine.current_enemies:
+                e.apply_powers(player)  # 实时更新敌人意图数值（如：被削弱后伤害降低）
 
-        if enemy.hp <= 0:
+        if not engine.current_enemies:
             # 👇 钩子 3：战斗结束阶段 (触发燃烧之血等)
             player.trigger_relics("on_combat_end", player)
-
-            break
+            return True
 
         # 玩家回合结束结算
         deck.end_turn()
@@ -171,15 +209,18 @@ def run_combat(player, deck, engine, enemy, floor_num):
         # 2. 怪物回合阶段
         # ==================================
         print("\n" + "-" * 20)
-        # 【时序修复 2】：怪物回合开始，清空它上一回合残留的格挡
-        enemy.clear_block()
+        # 🌟 修复 4：彻底遍历清理与执行
+        for e in list(engine.current_enemies):
+            if e.hp > 0:
+                e.clear_block()
+                e.execute_intent(engine, player)
 
-        # 怪物执行上回合宣告的意图 (可能会获得新格挡)
-        enemy.execute_intent(engine, player)
         engine.action_queue.resolve_all(engine)
 
         # 【时序修复 3】：双方执行完意图后，结算它的状态效果（如：流血伤害、持续增益等）
-        enemy.tick_powers()
+        # 🌟 修复 5：双方执行完意图后，遍历所有实体结算流血/中毒等状态
+        for e in engine.current_enemies:
+            e.tick_powers()
         player.tick_powers()
 
         print("-" * 20)

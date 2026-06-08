@@ -74,6 +74,7 @@ class GameEngine:
         self.action_queue = ActionQueue()
         # 引擎应当拥有整个战局的上下文，比如牌库管理器
         self.deck_manager = deck_manager
+        self.current_enemies = []  # 当前战斗中的敌人列表
 
     def play_card(self, card_data, source, target):
         print(f"\n▶️ 玩家打出了卡牌: 【{card_data['name']}】 (消耗 {card_data.get('cost', 0)} 费)")
@@ -82,11 +83,18 @@ class GameEngine:
         for effect in card_data['effects']:
             action_type = effect['action']
             amount = effect.get('amount', 0)  # 默认数值为0，避免 KeyError
+            target_type = effect.get('target', 'none')  # 默认目标为敌人
 
             if action_type == "Damage":
-                # 获取 JSON 里的 amount 和 target，实例化动作并塞入队列
-                action = DamageAction(source, target, amount)
-                self.action_queue.add_bottom(action)
+                if target_type == "enemy":
+                    # 获取 JSON 里的 amount 和 target，实例化动作并塞入队列
+                    action = DamageAction(source, target, amount)
+                    self.action_queue.add_bottom(action)
+
+                elif target_type == "all_enemies":
+                    for enemy in self.current_enemies:
+                        action = DamageAction(source, enemy, amount)
+                        self.action_queue.add_bottom(action)
 
             elif action_type == "Block":
                 action = GainBlockAction(source, amount)
@@ -105,6 +113,11 @@ class GameEngine:
 
             elif action_type == "Discard":
                 self.action_queue.add_bottom(DiscardAction(source, amount))
+
+            elif action_type == "LoseHP":
+                if target_type == "self":
+                    # source 就是打出这张牌的人（玩家自身）
+                    self.action_queue.add_bottom(LoseHPAction(target=source, amount=amount))
 
             else:
                 print(f"⚠️ 引擎警告: 未知的动作类型 '{action_type}'")
@@ -166,6 +179,9 @@ class DamageAction(Action):
         # 5. 死亡判定中断
         if self.target.hp <= 0:
             print(f"  💀 {self.target.name} 阵亡！")
+            # 如果它还在雷达里，立刻抹除！
+            if self.target in engine.current_enemies:
+                engine.current_enemies.remove(self.target)
 
 
 class DrawCardAction(Action):
@@ -179,25 +195,6 @@ class DrawCardAction(Action):
             engine.deck_manager.draw_cards(self.amount)
         else:
             print(f"  🃏 玩家试图抽取 {self.amount} 张牌 (提示: 引擎未绑定牌库管理器)。")
-
-
-class ApplyPowerAction(Action):
-    def __init__(self, target, power_name, amount):
-        super().__init__()
-        self.target = target
-        self.power_name = power_name
-        self.amount = amount
-
-    def execute(self, engine):
-        # 确保目标有 powers 属性字典
-        if not hasattr(self.target, 'powers'):
-            self.target.powers = {}
-
-        # 叠加状态层数
-        current_amount = self.target.powers.get(self.power_name, 0)
-        self.target.powers[self.power_name] = current_amount + self.amount
-
-        print(f"  ✨ {self.target.name} 被施加了 {self.amount} 层 【{self.power_name}】。")
 
 
 # 请将这个类添加到你的 engine.py 中
@@ -311,3 +308,24 @@ class ExhaustAction(BaseCardMoveAction):
     def get_destination_pile(self, deck_manager):
         # 明确目的地：消耗堆
         return deck_manager.exhaust_pile
+
+
+# 在 actions.py 中新增
+
+class LoseHPAction(Action):
+    def __init__(self, target, amount):
+        super().__init__()
+        self.target = target
+        self.amount = amount
+
+    def execute(self, engine):
+        # 扣除生命值（无视格挡）
+        self.target.hp -= self.amount
+        print(
+            f"  🩸 【{self.target.name}】 流失了 {self.amount} 点生命值！ (HP: {max(0, self.target.hp)}/{self.target.max_hp})")
+
+        # 死亡判定（针对玩家流血致死的情况）
+        if self.target.hp <= 0:
+            print(f"  💀 【{self.target.name}】 阵亡了！")
+            if self.target in engine.current_enemies:
+                engine.current_enemies.remove(self.target)
